@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PM OS">
+<meta name="theme-color" content="#0e0e0f">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<title>PM Daily OS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0e0e0f;--surface:#161618;--surface2:#1e1e21;--surface3:#26262a;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --text:#f0ede8;--text2:#9b9896;--text3:#5a5856;
+  --accent:#e8c97a;--accent-dim:rgba(232,201,122,0.12);--accent-text:#c9a84c;
+  --green:#5dba87;--green-dim:rgba(93,186,135,0.12);
+  --red:#e06c6c;--red-dim:rgba(224,108,108,0.12);
+  --blue:#6baed6;--blue-dim:rgba(107,174,214,0.12);
+  --orange:#e09c6c;--orange-dim:rgba(224,156,108,0.12);
+  --radius:12px;--radius-sm:8px;
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.5}
+
+/* ── App Shell ── */
+.shell{display:flex;flex-direction:column;height:100vh;height:100dvh}
+
+/* ── Top bar ── */
+.topbar{
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:calc(var(--safe-top) + 12px) 18px 12px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;
+}
+.topbar-left{display:flex;flex-direction:column;gap:1px}
+.topbar-title{font-family:'Instrument Serif',serif;font-size:19px;letter-spacing:-0.02em}
+.topbar-date{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.notif-btn{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:20px;padding:5px 10px;font-size:11px;
+  font-family:'DM Mono',monospace;cursor:pointer;color:var(--text2);
+  display:flex;align-items:center;gap:5px;
+}
+.notif-btn.on{background:var(--accent-dim);border-color:rgba(232,201,122,0.25);color:var(--accent)}
+.notif-dot{width:6px;height:6px;border-radius:50%;background:var(--text3)}
+.notif-btn.on .notif-dot{background:var(--accent)}
+
+/* ── Stats strip ── */
+.stats-strip{
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:10px 18px;
+  display:grid;grid-template-columns:repeat(4,1fr);gap:10px;
+  flex-shrink:0;
+}
+.stat{text-align:center}
+.stat-n{font-family:'DM Mono',monospace;font-size:17px;font-weight:500;color:var(--text)}
+.stat-l{font-size:10px;color:var(--text3);margin-top:1px;text-transform:uppercase;letter-spacing:.05em}
+.progress-bar{height:2px;background:var(--surface3);flex-shrink:0}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--green));transition:width .4s ease;width:0%}
+
+/* ── Nav tabs ── */
+.tabs{
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  display:flex;flex-shrink:0;overflow-x:auto;
+  scrollbar-width:none;
+}
+.tabs::-webkit-scrollbar{display:none}
+.tab{
+  flex:1;min-width:70px;padding:10px 6px;
+  border:none;background:none;color:var(--text3);
+  font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;
+  cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;
+  border-bottom:2px solid transparent;transition:all .15s;
+}
+.tab svg{width:17px;height:17px;flex-shrink:0}
+.tab:hover{color:var(--text2)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* ── Pages ── */
+.pages{flex:1;overflow:hidden;position:relative}
+.page{position:absolute;inset:0;overflow-y:auto;padding:16px 16px calc(var(--safe-bottom) + 16px);display:none}
+.page.active{display:block;animation:fadeUp .2s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Cards ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px}
+.card-label{font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;font-family:'DM Mono',monospace}
+
+/* ── Inputs ── */
+input[type=text],input[type=time],textarea,select{
+  background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);
+  color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;
+  padding:10px 12px;outline:none;transition:border-color .15s;width:100%;
+}
+input[type=text]:focus,input[type=time]:focus,textarea:focus{border-color:var(--border2)}
+input::placeholder,textarea::placeholder{color:var(--text3)}
+textarea{resize:vertical;min-height:90px;line-height:1.6}
+input[type=time]{color-scheme:dark}
+
+/* ── Buttons ── */
+.btn{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:9px 16px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn:active{transform:scale(.97)}
+.btn-accent{background:var(--accent-dim);border-color:rgba(232,201,122,.25);color:var(--accent)}
+.btn-ghost{background:transparent;border-color:transparent;color:var(--text3)}
+.btn-ghost:hover{background:var(--surface2);color:var(--text2);border-color:var(--border)}
+.btn-full{width:100%;text-align:center;padding:12px}
+.btn-row{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+
+/* ── Priority selector ── */
+.pri-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.pri-btn{font-size:11px;padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;font-family:'DM Mono',monospace;transition:all .15s}
+.pri-btn.sel-p1{background:var(--red-dim);border-color:rgba(224,108,108,.3);color:var(--red)}
+.pri-btn.sel-p2{background:var(--orange-dim);border-color:rgba(224,156,108,.3);color:var(--orange)}
+.pri-btn.sel-p3{background:var(--green-dim);border-color:rgba(93,186,135,.3);color:var(--green)}
+
+/* ── Chips ── */
+.chip{font-size:10px;padding:2px 7px;border-radius:4px;font-weight:500;white-space:nowrap;font-family:'DM Mono',monospace}
+.chip-p1{background:var(--red-dim);color:var(--red)}
+.chip-p2{background:var(--orange-dim);color:var(--orange)}
+.chip-p3{background:var(--green-dim);color:var(--green)}
+.chip-meeting{background:var(--blue-dim);color:var(--blue)}
+.chip-decision{background:rgba(159,130,196,.15);color:#b89ad8}
+.chip-followup{background:var(--accent-dim);color:var(--accent-text)}
+
+/* ── Task rows ── */
+.task-row{display:flex;align-items:flex-start;gap:10px;padding:11px 0;border-bottom:1px solid var(--border);transition:opacity .2s}
+.task-row:last-child{border-bottom:none}
+.task-row.done{opacity:.4}
+.task-row.done .task-text{text-decoration:line-through}
+.checkbox{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--border2);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;transition:all .15s;background:transparent}
+.checkbox:active{transform:scale(.9)}
+.checkbox.checked{background:var(--green-dim);border-color:var(--green)}
+.checkbox svg{width:11px;height:11px;display:none}
+.checkbox.checked svg{display:block}
+.task-text{flex:1;font-size:13px;color:var(--text);line-height:1.4}
+.task-meta{display:flex;align-items:center;gap:5px;flex-shrink:0}
+.del-btn{background:none;border:none;color:var(--text3);cursor:pointer;padding:2px 5px;border-radius:4px;font-size:16px;line-height:1}
+
+/* ── Section sep ── */
+.sep{display:flex;align-items:center;gap:8px;margin:14px 0 10px}
+.sep span{font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap}
+.sep::before,.sep::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ── MOM items ── */
+.mom-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.mom-item:last-child{border-bottom:none}
+.mom-check{width:17px;height:17px;border-radius:4px;border:1px solid var(--border2);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;transition:all .15s;background:transparent}
+.mom-check.checked{background:var(--accent-dim);border-color:var(--accent-text)}
+.mom-check svg{width:9px;height:9px;display:none}
+.mom-check.checked svg{display:block}
+
+/* ── AI output ── */
+.ai-out{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;font-size:12px;line-height:1.8;color:var(--text2);white-space:pre-wrap;font-family:'DM Mono',monospace}
+.ai-out.loading::after{content:'▋';animation:blink 1s step-start infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* ── EOD ── */
+.eod-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.eod-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;text-align:center}
+.eod-n{font-family:'DM Mono',monospace;font-size:24px;font-weight:500;color:var(--text)}
+.eod-l{font-size:10px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:.06em}
+.eod-report{background:var(--surface2);border-left:2px solid var(--accent);padding:14px 16px;border-radius:0 var(--radius-sm) var(--radius-sm) 0;font-size:12px;line-height:1.9;color:var(--text2);white-space:pre-wrap;font-family:'DM Mono',monospace}
+
+/* ── Log ── */
+.log-day{margin-bottom:18px}
+.log-date{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid var(--border)}
+.log-item{display:flex;align-items:center;gap:8px;padding:7px 0;font-size:12px;color:var(--text2);border-bottom:1px solid var(--border)}
+.log-item:last-child{border-bottom:none}
+
+/* ── Settings ── */
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)}
+.settings-row:last-child{border-bottom:none}
+.settings-label{font-size:13px;color:var(--text)}
+.settings-sub{font-size:11px;color:var(--text3);margin-top:2px;font-family:'DM Mono',monospace}
+.toggle{width:42px;height:24px;border-radius:12px;background:var(--surface3);border:1px solid var(--border2);cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+.toggle.on{background:var(--accent-dim);border-color:rgba(232,201,122,.3)}
+.toggle::after{content:'';position:absolute;width:18px;height:18px;border-radius:9px;background:var(--text3);top:2px;left:2px;transition:all .2s}
+.toggle.on::after{background:var(--accent);left:20px}
+
+/* ── Empty ── */
+.empty{text-align:center;padding:28px 0;color:var(--text3);font-size:12px}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:calc(var(--safe-bottom) + 20px);left:50%;transform:translateX(-50%) translateY(60px);background:var(--surface2);border:1px solid var(--border2);border-radius:20px;padding:10px 18px;font-size:12px;color:var(--text);z-index:999;opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;display:flex;align-items:center;gap:8px}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+.tdot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
+.tdot.warn{background:var(--accent)}
+
+/* ── Banner ── */
+.banner{background:var(--accent-dim);border:1px solid rgba(232,201,122,.2);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:12px;font-size:12px;color:var(--accent-text);line-height:1.6;display:flex;gap:10px;align-items:flex-start}
+.banner svg{width:14px;height:14px;flex-shrink:0;margin-top:1px}
+
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:2px}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-title">PM Daily OS</div>
+      <div class="topbar-date" id="topbar-date">—</div>
+    </div>
+    <div class="topbar-right">
+      <button class="notif-btn" id="notif-btn" onclick="handleNotifToggle()">
+        <div class="notif-dot" id="notif-dot"></div>
+        <span id="notif-label">notifications</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- STATS STRIP -->
+  <div class="stats-strip">
+    <div class="stat"><div class="stat-n" id="s-total">0</div><div class="stat-l">tasks</div></div>
+    <div class="stat"><div class="stat-n" id="s-done">0</div><div class="stat-l">done</div></div>
+    <div class="stat"><div class="stat-n" id="s-pct">0%</div><div class="stat-l">progress</div></div>
+    <div class="stat"><div class="stat-n" id="s-p1">0</div><div class="stat-l">urgent</div></div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="pbar"></div></div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="goTo('today',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Today
+    </button>
+    <button class="tab" onclick="goTo('mom',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Notes
+    </button>
+    <button class="tab" onclick="goTo('eod',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      EOD
+    </button>
+    <button class="tab" onclick="goTo('log',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Log
+    </button>
+    <button class="tab" onclick="goTo('settings',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings
+    </button>
+  </div>
+
+  <!-- PAGES -->
+  <div class="pages">
+
+    <!-- TODAY -->
+    <div class="page active" id="page-today">
+      <div id="ios-banner" class="banner" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div>To get push notifications on iPhone, add this app to your Home Screen: tap <strong>Share →</strong> then <strong>"Add to Home Screen"</strong>. Then enable notifications in Settings tab.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">add task</div>
+        <input type="text" id="task-input" placeholder="What needs to get done today?" autocomplete="off" onkeydown="if(event.key==='Enter')addTask()">
+        <div class="pri-row">
+          <span style="font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;align-self:center">priority →</span>
+          <button class="pri-btn sel-p1" id="pb-P1" onclick="setPri('P1')">P1 urgent</button>
+          <button class="pri-btn" id="pb-P2" onclick="setPri('P2')">P2 important</button>
+          <button class="pri-btn" id="pb-P3" onclick="setPri('P3')">P3 someday</button>
+        </div>
+        <div style="margin-top:10px">
+          <button class="btn btn-accent btn-full" onclick="addTask()">+ add task</button>
+        </div>
+      </div>
+
+      <div id="section-p1" style="display:none">
+        <div class="sep"><span>🔴 P1 — urgent</span></div>
+        <div class="card" style="padding:4px 16px"><div id="list-p1"></div></div>
+      </div>
+      <div id="section-p2" style="display:none">
+        <div class="sep"><span>🟡 P2 — important</span></div>
+        <div class="card" style="padding:4px 16px"><div id="list-p2"></div></div>
+      </div>
+      <div id="section-p3" style="display:none">
+        <div class="sep"><span>🟢 P3 — when free</span></div>
+        <div class="card" style="padding:4px 16px"><div id="list-p3"></div></div>
+      </div>
+      <div id="empty-tasks" class="empty">No tasks yet — add your first one above.</div>
+    </div>
+
+    <!-- MEETING NOTES -->
+    <div class="page" id="page-mom">
+      <div class="card">
+        <div class="card-label">meeting details</div>
+        <input type="text" id="meeting-name" placeholder="Meeting name  e.g. Growth sync" style="margin-bottom:8px">
+        <textarea id="mom-input" placeholder="Paste Wispr transcript or raw notes here...
+
+Claude will extract:
+  • Action items with owners
+  • Decisions made
+  • Follow-ups needed
+  • Blockers flagged"></textarea>
+        <div class="btn-row">
+          <button class="btn btn-ghost" onclick="clearMOM()">clear</button>
+          <button class="btn btn-accent" id="parse-btn" onclick="parseMOM()">extract →</button>
+        </div>
+      </div>
+
+      <div id="mom-result-card" style="display:none">
+        <div class="card">
+          <div class="card-label" id="mom-result-label">extracted items</div>
+          <div id="mom-status" class="ai-out" style="display:none"></div>
+          <div id="mom-items"></div>
+          <div class="btn-row" id="mom-action-row" style="display:none">
+            <button class="btn btn-ghost" onclick="document.getElementById('mom-result-card').style.display='none'">dismiss</button>
+            <button class="btn btn-accent" onclick="pushMOMToToday()">push to today →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EOD REVIEW -->
+    <div class="page" id="page-eod">
+      <div class="eod-grid">
+        <div class="eod-card"><div class="eod-n" id="eod-done">0</div><div class="eod-l">done</div></div>
+        <div class="eod-card"><div class="eod-n" id="eod-pend">0</div><div class="eod-l">pending</div></div>
+        <div class="eod-card"><div class="eod-n" id="eod-pct">0%</div><div class="eod-l">rate</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">completed today</div>
+        <div id="eod-done-list"><div class="empty">nothing completed yet</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">still pending</div>
+        <div id="eod-pend-list"><div class="empty">all clear 🎉</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">ai coach summary</div>
+        <div id="eod-report" class="eod-report" style="color:var(--text3)">Tap "generate" to get your personalized EOD summary from your PM coach.</div>
+        <div style="margin-top:12px">
+          <button class="btn btn-accent btn-full" onclick="generateEOD()">generate EOD report →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOG -->
+    <div class="page" id="page-log">
+      <div class="card">
+        <div class="card-label">completed tasks — all time</div>
+        <div id="log-content"><div class="empty">No completed tasks yet.</div></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="page" id="page-settings">
+      <div class="card">
+        <div class="card-label">notifications</div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">EOD reminder</div>
+            <div class="settings-sub">daily push notification</div>
+          </div>
+          <div class="toggle" id="eod-toggle" onclick="toggleEOD()"></div>
+        </div>
+
+        <div class="settings-row" id="time-row">
+          <div>
+            <div class="settings-label">reminder time</div>
+            <div class="settings-sub" id="time-sub">set your end of day</div>
+          </div>
+          <input type="time" id="eod-time-input" value="18:00" onchange="saveEODTime()" style="width:110px;text-align:center">
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">notification status</div>
+            <div class="settings-sub" id="notif-status-text">checking...</div>
+          </div>
+          <button class="btn" onclick="requestNotifPermission()" id="enable-notif-btn" style="display:none">enable</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">about</div>
+        <div class="settings-row">
+          <div><div class="settings-label">PM Daily OS</div><div class="settings-sub">built for Hemanth · runs offline</div></div>
+        </div>
+        <div class="settings-row">
+          <div><div class="settings-label">data storage</div><div class="settings-sub">local browser storage · never leaves device</div></div>
+        </div>
+        <div class="settings-row">
+          <div><div class="settings-label">total tasks</div><div class="settings-sub" id="settings-total">0 tasks all time</div></div>
+          <button class="btn" style="font-size:11px;color:var(--red);border-color:var(--red-dim);background:var(--red-dim)" onclick="clearAll()">clear all</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">ios install guide</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.8;font-family:'DM Mono',monospace">
+          1. open this URL in Safari<br>
+          2. tap the Share button (box with arrow)<br>
+          3. scroll down → "Add to Home Screen"<br>
+          4. tap Add → app installs on home screen<br>
+          5. open from home screen (required for push)<br>
+          6. come back here → enable EOD reminder
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"><div class="tdot" id="tdot"></div><span id="tmsg"></span></div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────
+let tasks = JSON.parse(localStorage.getItem('pm_os_tasks') || '[]');
+let currentPri = 'P1';
+let momItems = [];
+let eodTimer = null;
+let SW = null;
+
+// ── Init ───────────────────────────────────────────────────────────────
+async function init() {
+  const now = new Date();
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('topbar-date').textContent =
+    `${days[now.getDay()]} ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+
+  // iOS banner
+  const isIOS = /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
+  const isStandalone = window.navigator.standalone;
+  if (isIOS && !isStandalone) {
+    document.getElementById('ios-banner').style.display = 'flex';
+  }
+
+  // Register SW
+  if ('serviceWorker' in navigator) {
+    try {
+      const reg = await navigator.serviceWorker.register('sw.js');
+      SW = reg;
+    } catch(e) { console.warn('SW registration failed', e); }
+  }
+
+  checkNotifStatus();
+  renderAll();
+  scheduleEODCheck();
+  updateEODPage();
+  renderLog();
+  updateSettingsPage();
+
+  // Load saved EOD time
+  const savedTime = localStorage.getItem('eod_time') || '18:00';
+  document.getElementById('eod-time-input').value = savedTime;
+  document.getElementById('time-sub').textContent = `currently set to ${formatTime(savedTime)}`;
+
+  // Load EOD toggle state
+  const eodOn = localStorage.getItem('eod_notif') === 'true';
+  if (eodOn) document.getElementById('eod-toggle').classList.add('on');
+}
+
+function todayStr() { return new Date().toDateString(); }
+function save() { localStorage.setItem('pm_os_tasks', JSON.stringify(tasks)); }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function formatTime(t) {
+  const [h,m] = t.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  return `${h%12||12}:${String(m).padStart(2,'0')} ${ampm}`;
+}
+
+// ── Nav ────────────────────────────────────────────────────────────────
+function goTo(page, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  btn.classList.add('active');
+  if (page==='eod') updateEODPage();
+  if (page==='log') renderLog();
+  if (page==='settings') updateSettingsPage();
+}
+
+// ── Tasks ──────────────────────────────────────────────────────────────
+function setPri(p) {
+  currentPri = p;
+  ['P1','P2','P3'].forEach(x => {
+    const b = document.getElementById('pb-'+x);
+    b.className = 'pri-btn';
+    if (x===p) b.classList.add('sel-'+p.toLowerCase());
+  });
+}
+
+function addTask(text, pri, source, meetingName) {
+  const input = document.getElementById('task-input');
+  const t = (text || input.value).trim();
+  if (!t) return;
+  tasks.unshift({
+    id: Date.now()+Math.random(), text:t,
+    pri:pri||currentPri, done:false,
+    source:source||'manual', meetingName:meetingName||null,
+    date:todayStr(), ts:Date.now()
+  });
+  if (!text) input.value = '';
+  save(); renderAll(); updateStats();
+}
+
+function toggleTask(id) {
+  const t = tasks.find(x=>x.id===id);
+  if (t) { t.done=!t.done; t.doneAt=t.done?Date.now():null; }
+  save(); renderAll(); updateStats();
+  if (t&&t.done) showToast('done ✓');
+}
+
+function deleteTask(id) {
+  tasks=tasks.filter(x=>x.id!==id);
+  save(); renderAll(); updateStats();
+}
+
+function renderList(containerId, list) {
+  const el = document.getElementById(containerId);
+  if (!list.length) { el.innerHTML=''; return; }
+  el.innerHTML = list.map(t=>`
+    <div class="task-row ${t.done?'done':''}">
+      <div class="checkbox ${t.done?'checked':''}" onclick="toggleTask(${t.id})">
+        <svg viewBox="0 0 12 12" fill="none" stroke="var(--green)" stroke-width="2.5"><polyline points="2 6 5 9 10 3"/></svg>
+      </div>
+      <span class="task-text">${esc(t.text)}</span>
+      <div class="task-meta">
+        ${t.source==='meeting'?`<span class="chip chip-meeting">${esc(t.meetingName||'mtg')}</span>`:''}
+        <span class="chip chip-${t.pri.toLowerCase()}">${t.pri}</span>
+        <button class="del-btn" onclick="deleteTask(${t.id})">×</button>
+      </div>
+    </div>`).join('');
+}
+
+function renderAll() {
+  const today = todayStr();
+  const tt = tasks.filter(t=>t.date===today);
+  const byPri = p => tt.filter(t=>t.pri===p).sort((a,b)=>a.done-b.done);
+  ['P1','P2','P3'].forEach(p=>{
+    const list = byPri(p);
+    renderList('list-'+p.toLowerCase(), list);
+    document.getElementById('section-'+p.toLowerCase()).style.display = list.length?'block':'none';
+  });
+  document.getElementById('empty-tasks').style.display = tt.length?'none':'block';
+  updateStats();
+}
+
+function updateStats() {
+  const tt = tasks.filter(t=>t.date===todayStr());
+  const done = tt.filter(t=>t.done).length;
+  const total = tt.length;
+  const pct = total?Math.round(done/total*100):0;
+  document.getElementById('s-total').textContent = total;
+  document.getElementById('s-done').textContent = done;
+  document.getElementById('s-pct').textContent = pct+'%';
+  document.getElementById('s-p1').textContent = tt.filter(t=>t.pri==='P1'&&!t.done).length;
+  document.getElementById('pbar').style.width = pct+'%';
+  document.getElementById('settings-total').textContent = `${tasks.length} tasks all time`;
+}
+
+// ── MOM Parser ─────────────────────────────────────────────────────────
+async function parseMOM() {
+  const notes = document.getElementById('mom-input').value.trim();
+  if (!notes) { showToast('paste some notes first', true); return; }
+  const btn = document.getElementById('parse-btn');
+  const resultCard = document.getElementById('mom-result-card');
+  const statusEl = document.getElementById('mom-status');
+  const itemsEl = document.getElementById('mom-items');
+  btn.disabled=true; btn.textContent='extracting...';
+  resultCard.style.display='block';
+  statusEl.style.display='block';
+  statusEl.className='ai-out loading';
+  statusEl.textContent='reading your notes';
+  itemsEl.innerHTML=''; momItems=[];
+  document.getElementById('mom-action-row').style.display='none';
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514', max_tokens:1200,
+        messages:[{role:'user',content:`You are a PM assistant. Extract ALL action items, decisions, and follow-ups from these meeting notes.
+Return ONLY valid JSON, no markdown, no backticks:
+{"items":[{"task":"clear description","owner":"me or name","priority":"P1/P2/P3","type":"action/decision/followup"}]}
+P1=urgent/blocker, P2=important this week, P3=good to have. Owner "me" if assigned to note-taker.
+Notes:\n${notes}`}]
+      })
+    });
+    const data = await res.json();
+    const text = (data.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('');
+    let parsed;
+    try { parsed=JSON.parse(text.replace(/```json|```/g,'').trim()); }
+    catch(e) { statusEl.className='ai-out'; statusEl.textContent='Parse error:\n'+text; btn.disabled=false; btn.textContent='extract →'; return; }
+    momItems=parsed.items||[];
+    statusEl.style.display='none';
+    if (!momItems.length) { itemsEl.innerHTML='<div class="empty">No action items found.</div>'; btn.disabled=false; btn.textContent='extract →'; return; }
+    document.getElementById('mom-result-label').textContent=`${momItems.length} item${momItems.length>1?'s':''} extracted`;
+    itemsEl.innerHTML=momItems.map((item,i)=>`
+      <div class="mom-item">
+        <div class="mom-check checked" id="mc-${i}" onclick="toggleMC(${i})">
+          <svg viewBox="0 0 12 12" fill="none" stroke="var(--accent-text)" stroke-width="2.5"><polyline points="2 6 5 9 10 3"/></svg>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:13px;color:var(--text)">${esc(item.task)}</div>
+          ${item.owner&&item.owner!=='me'?`<div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:'DM Mono',monospace">→ ${esc(item.owner)}</div>`:''}
+        </div>
+        <div style="display:flex;gap:4px;flex-shrink:0;margin-left:6px">
+          <span class="chip chip-${(item.priority||'p2').toLowerCase()}">${item.priority||'P2'}</span>
+          <span class="chip ${item.type==='decision'?'chip-decision':item.type==='followup'?'chip-followup':'chip-meeting'}">${item.type||'action'}</span>
+        </div>
+      </div>`).join('');
+    document.getElementById('mom-action-row').style.display='flex';
+  } catch(err) { statusEl.className='ai-out'; statusEl.textContent='Error: '+err.message; }
+  btn.disabled=false; btn.textContent='extract →';
+}
+
+function toggleMC(i) {
+  const el=document.getElementById('mc-'+i);
+  const icon=el.querySelector('svg');
+  const on=el.classList.toggle('checked');
+  icon.style.display=on?'block':'none';
+}
+
+function pushMOMToToday() {
+  const mname=document.getElementById('meeting-name').value.trim()||'meeting';
+  let count=0;
+  momItems.forEach((item,i)=>{
+    if(document.getElementById('mc-'+i)?.classList.contains('checked')) {
+      addTask(item.task, item.priority||'P2', 'meeting', mname);
+      count++;
+    }
+  });
+  save(); renderAll();
+  showToast(`${count} task${count!==1?'s':''} added`);
+  goTo('today', document.querySelectorAll('.tab')[0]);
+}
+
+function clearMOM() {
+  document.getElementById('mom-input').value='';
+  document.getElementById('meeting-name').value='';
+  document.getElementById('mom-result-card').style.display='none';
+  momItems=[];
+}
+
+// ── EOD Page ────────────────────────────────────────────────────────────
+function updateEODPage() {
+  const tt=tasks.filter(t=>t.date===todayStr());
+  const done=tt.filter(t=>t.done);
+  const pend=tt.filter(t=>!t.done);
+  const pct=tt.length?Math.round(done.length/tt.length*100):0;
+  document.getElementById('eod-done').textContent=done.length;
+  document.getElementById('eod-pend').textContent=pend.length;
+  document.getElementById('eod-pct').textContent=pct+'%';
+  document.getElementById('eod-done-list').innerHTML=done.length?done.map(t=>`
+    <div class="log-item">
+      <svg width="13" height="13" viewBox="0 0 12 12" fill="none" stroke="var(--green)" stroke-width="2.5"><polyline points="2 6 5 9 10 3"/></svg>
+      <span>${esc(t.text)}</span><span class="chip chip-${t.pri.toLowerCase()}" style="margin-left:auto">${t.pri}</span>
+    </div>`).join(''):'<div class="empty">nothing completed yet</div>';
+  document.getElementById('eod-pend-list').innerHTML=pend.length?pend.map(t=>`
+    <div class="log-item">
+      <svg width="13" height="13" viewBox="0 0 12 12" fill="none" stroke="var(--text3)" stroke-width="1.5"><circle cx="6" cy="6" r="5"/></svg>
+      <span>${esc(t.text)}</span><span class="chip chip-${t.pri.toLowerCase()}" style="margin-left:auto">${t.pri}</span>
+    </div>`).join(''):'<div style="color:var(--green);font-size:12px;padding:8px 0">all clear — nothing pending 🎉</div>';
+}
+
+async function generateEOD() {
+  const tt=tasks.filter(t=>t.date===todayStr());
+  const done=tt.filter(t=>t.done);
+  const pend=tt.filter(t=>!t.done);
+  const el=document.getElementById('eod-report');
+  el.style.color='var(--text2)';
+  el.className='eod-report loading';
+  el.textContent='generating your report';
+  try {
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514', max_tokens:600,
+        messages:[{role:'user',content:`You are a PM coach. Write a sharp, honest EOD summary in 6-8 lines.
+Completed (${done.length}): ${done.map(t=>`[${t.pri}] ${t.text}`).join(', ')||'none'}
+Pending (${pend.length}): ${pend.map(t=>`[${t.pri}] ${t.text}`).join(', ')||'none'}
+Done rate: ${tt.length?Math.round(done.length/tt.length*100):0}%
+Be specific, reference actual tasks, call out if P1s are incomplete, say exactly what to tackle first tomorrow. No filler. Second person.`}]
+      })
+    });
+    const data=await res.json();
+    el.className='eod-report';
+    el.textContent=(data.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('');
+    showToast('report ready');
+  } catch(err) { el.className='eod-report'; el.textContent='Error: '+err.message; }
+}
+
+// ── Log ────────────────────────────────────────────────────────────────
+function renderLog() {
+  const done=tasks.filter(t=>t.done).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
+  const el=document.getElementById('log-content');
+  if (!done.length) { el.innerHTML='<div class="empty">No completed tasks yet.</div>'; return; }
+  const byDate={};
+  done.forEach(t=>{ if(!byDate[t.date])byDate[t.date]=[]; byDate[t.date].push(t); });
+  el.innerHTML=Object.entries(byDate).slice(0,14).map(([d,ts])=>`
+    <div class="log-day">
+      <div class="log-date">${d} — ${ts.length} done</div>
+      ${ts.map(t=>`<div class="log-item">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="var(--green)" stroke-width="2.5"><polyline points="2 6 5 9 10 3"/></svg>
+        <span>${esc(t.text)}</span>
+        ${t.source==='meeting'?`<span class="chip chip-meeting">${esc(t.meetingName||'mtg')}</span>`:''}
+        <span class="chip chip-${t.pri.toLowerCase()}" style="margin-left:auto">${t.pri}</span>
+      </div>`).join('')}
+    </div>`).join('');
+}
+
+// ── Notifications ──────────────────────────────────────────────────────
+async function checkNotifStatus() {
+  const btn=document.getElementById('notif-btn');
+  const dot=document.getElementById('notif-dot');
+  const label=document.getElementById('notif-label');
+  if (!('Notification' in window)) {
+    label.textContent='not supported'; return;
+  }
+  if (Notification.permission==='granted') {
+    btn.classList.add('on'); label.textContent='notifications on';
+  } else if (Notification.permission==='denied') {
+    label.textContent='blocked in settings';
+  } else {
+    label.textContent='notifications off';
+  }
+}
+
+function updateSettingsPage() {
+  updateStats();
+  const status=document.getElementById('notif-status-text');
+  const enableBtn=document.getElementById('enable-notif-btn');
+  if (!('Notification' in window)) {
+    status.textContent='not supported on this browser'; return;
+  }
+  if (Notification.permission==='granted') {
+    status.textContent='enabled ✓';
+    enableBtn.style.display='none';
+  } else if (Notification.permission==='denied') {
+    status.textContent='blocked — enable in iOS Settings > Safari';
+    enableBtn.style.display='none';
+  } else {
+    status.textContent='not yet enabled';
+    enableBtn.style.display='block';
+  }
+}
+
+async function requestNotifPermission() {
+  if (!('Notification' in window)) { showToast('not supported', true); return; }
+  const result=await Notification.requestPermission();
+  checkNotifStatus();
+  updateSettingsPage();
+  if (result==='granted') {
+    showToast('notifications enabled ✓');
+    if (localStorage.getItem('eod_notif')==='true') scheduleEODCheck();
+  } else {
+    showToast('permission denied', true);
+  }
+}
+
+async function handleNotifToggle() {
+  if (Notification.permission!=='granted') {
+    await requestNotifPermission();
+  } else {
+    showToast('notifications already on');
+  }
+}
+
+function toggleEOD() {
+  const toggle=document.getElementById('eod-toggle');
+  const isOn=toggle.classList.toggle('on');
+  localStorage.setItem('eod_notif', isOn);
+  if (isOn) {
+    if (Notification.permission!=='granted') {
+      requestNotifPermission().then(()=>scheduleEODCheck());
+    } else {
+      scheduleEODCheck();
+    }
+    showToast('EOD reminder enabled');
+  } else {
+    if (eodTimer) clearTimeout(eodTimer);
+    showToast('EOD reminder off');
+  }
+}
+
+function saveEODTime() {
+  const t=document.getElementById('eod-time-input').value;
+  localStorage.setItem('eod_time', t);
+  document.getElementById('time-sub').textContent=`currently set to ${formatTime(t)}`;
+  if (localStorage.getItem('eod_notif')==='true') scheduleEODCheck();
+  showToast(`reminder set for ${formatTime(t)}`);
+}
+
+function scheduleEODCheck() {
+  if (eodTimer) clearTimeout(eodTimer);
+  if (localStorage.getItem('eod_notif')!=='true') return;
+  if (Notification.permission!=='granted') return;
+
+  const now=new Date();
+  const [h,m]=(localStorage.getItem('eod_time')||'18:00').split(':').map(Number);
+  const target=new Date(now);
+  target.setHours(h,m,0,0);
+  if (target<=now) target.setDate(target.getDate()+1);
+
+  const ms=target-now;
+  eodTimer=setTimeout(()=>{
+    fireEODNotification();
+    scheduleEODCheck(); // reschedule for next day
+  }, ms);
+}
+
+function fireEODNotification() {
+  const tt=tasks.filter(t=>t.date===todayStr());
+  const done=tt.filter(t=>t.done).length;
+  const pend=tt.filter(t=>!t.done).length;
+  const msg=pend>0
+    ? `${done} done, ${pend} still pending. Time to wrap up!`
+    : `All ${done} tasks done today. Great work!`;
+
+  if (SW) {
+    SW.active?.postMessage({ type:'FIRE_EOD', doneCount:done, pendingCount:pend });
+  } else if (Notification.permission==='granted') {
+    new Notification('PM Daily OS — EOD', { body:msg, icon:'icons/icon-192.png', tag:'eod' });
+  }
+}
+
+// ── Utils ──────────────────────────────────────────────────────────────
+let toastT;
+function showToast(msg, warn=false) {
+  const t=document.getElementById('toast');
+  document.getElementById('tdot').className='tdot'+(warn?' warn':'');
+  document.getElementById('tmsg').textContent=msg;
+  t.classList.add('show');
+  clearTimeout(toastT);
+  toastT=setTimeout(()=>t.classList.remove('show'), 2600);
+}
+
+function clearAll() {
+  if (!confirm('Clear all tasks? This cannot be undone.')) return;
+  tasks=[];
+  save(); renderAll(); updateEODPage(); renderLog();
+  showToast('all tasks cleared', true);
+}
+
+init();
+</script>
+</body>
+</html>
