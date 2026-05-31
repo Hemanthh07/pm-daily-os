@@ -270,7 +270,8 @@ input[type=time]{color-scheme:dark}
 
       <div class="card">
         <div class="card-label">add task</div>
-        <input type="text" id="task-input" placeholder="What needs to get done today?" autocomplete="off" onkeydown="if(event.key==='Enter')addTask()">
+        <textarea id="task-input" placeholder="What needs to get done today?&#10;Add multiple tasks, one per line" autocomplete="off" rows="3" style="min-height:72px;resize:none" onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)){event.preventDefault();addTask()}"></textarea>
+        <div style="font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:5px">one task per line · ctrl+enter or click add</div>
         <div class="pri-row">
           <span style="font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;align-self:center">priority →</span>
           <button class="pri-btn sel-p1" id="pb-P1" onclick="setPri('P1')">P1 urgent</button>
@@ -506,15 +507,26 @@ function setPri(p) {
 
 function addTask(text, pri, source, meetingName) {
   const input = document.getElementById('task-input');
-  const t = (text || input.value).trim();
-  if (!t) return;
-  tasks.unshift({
-    id: Date.now()+Math.random(), text:t,
-    pri:pri||currentPri, done:false,
-    source:source||'manual', meetingName:meetingName||null,
-    date:todayStr(), ts:Date.now()
-  });
-  if (!text) input.value = '';
+  if (text) {
+    tasks.unshift({
+      id: Date.now()+Math.random(), text:text.trim(),
+      pri:pri||currentPri, done:false,
+      source:source||'manual', meetingName:meetingName||null,
+      date:todayStr(), ts:Date.now()
+    });
+  } else {
+    const lines = input.value.split('\n').map(l=>l.trim()).filter(l=>l);
+    if (!lines.length) return;
+    lines.forEach(line => {
+      tasks.unshift({
+        id: Date.now()+Math.random(), text:line,
+        pri:pri||currentPri, done:false,
+        source:'manual', meetingName:null,
+        date:todayStr(), ts:Date.now()
+      });
+    });
+    input.value = '';
+  }
   save(); renderAll(); updateStats();
 }
 
