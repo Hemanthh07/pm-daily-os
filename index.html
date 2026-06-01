@@ -804,7 +804,7 @@ function toggleEOD() {
     }
     showToast('EOD reminder enabled');
   } else {
-    if (eodTimer) clearTimeout(eodTimer);
+    if (eodTimer) clearInterval(eodTimer);
     showToast('EOD reminder off');
   }
 }
@@ -818,21 +818,28 @@ function saveEODTime() {
 }
 
 function scheduleEODCheck() {
-  if (eodTimer) clearTimeout(eodTimer);
+  if (eodTimer) clearInterval(eodTimer);
   if (localStorage.getItem('eod_notif')!=='true') return;
   if (Notification.permission!=='granted') return;
 
-  const now=new Date();
-  const [h,m]=(localStorage.getItem('eod_time')||'18:00').split(':').map(Number);
-  const target=new Date(now);
-  target.setHours(h,m,0,0);
-  if (target<=now) target.setDate(target.getDate()+1);
+  checkAndFireEOD(); // catch any missed notification immediately on (re)open
+  eodTimer = setInterval(checkAndFireEOD, 60_000); // check every minute
+}
 
-  const ms=target-now;
-  eodTimer=setTimeout(()=>{
+function checkAndFireEOD() {
+  if (localStorage.getItem('eod_notif')!=='true') return;
+  if (Notification.permission!=='granted') return;
+
+  const now = new Date();
+  const [h,m] = (localStorage.getItem('eod_time')||'18:00').split(':').map(Number);
+  const todayKey = todayStr();
+
+  if (localStorage.getItem('eod_last_fired') === todayKey) return; // already fired today
+
+  if (now.getHours() > h || (now.getHours() === h && now.getMinutes() >= m)) {
+    localStorage.setItem('eod_last_fired', todayKey);
     fireEODNotification();
-    scheduleEODCheck(); // reschedule for next day
-  }, ms);
+  }
 }
 
 function fireEODNotification() {
@@ -843,8 +850,8 @@ function fireEODNotification() {
     ? `${done} done, ${pend} still pending. Time to wrap up!`
     : `All ${done} tasks done today. Great work!`;
 
-  if (SW) {
-    SW.active?.postMessage({ type:'FIRE_EOD', doneCount:done, pendingCount:pend });
+  if (SW && SW.active) {
+    SW.active.postMessage({ type:'FIRE_EOD', doneCount:done, pendingCount:pend });
   } else if (Notification.permission==='granted') {
     new Notification('PM Daily OS — EOD', { body:msg, icon:'icons/icon-192.png', tag:'eod' });
   }
