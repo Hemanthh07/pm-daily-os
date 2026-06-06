@@ -270,7 +270,7 @@ input[type=time]{color-scheme:dark}
 
       <div class="card">
         <div class="card-label">add task</div>
-        <textarea id="task-input" placeholder="What needs to get done today?&#10;Add multiple tasks, one per line" autocomplete="off" rows="3" style="min-height:72px;resize:none" onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)){event.preventDefault();addTask()}"></textarea>
+        <textarea id="task-input" placeholder="What needs to get done today?&#10;Add multiple tasks, one per line" autocomplete="off" style="min-height:80px;resize:none;overflow:hidden" onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)){event.preventDefault();addTask()}" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
         <div style="font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:5px">blank line = new task · enter = new line within task · ctrl+enter or click add</div>
         <div class="pri-row">
           <span style="font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;align-self:center">priority →</span>
