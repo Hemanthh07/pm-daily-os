@@ -145,7 +145,7 @@ input[type=time]{color-scheme:dark}
 .checkbox.checked{background:var(--green-dim);border-color:var(--green)}
 .checkbox svg{width:11px;height:11px;display:none}
 .checkbox.checked svg{display:block}
-.task-text{flex:1;font-size:13px;color:var(--text);line-height:1.4}
+.task-text{flex:1;font-size:13px;color:var(--text);line-height:1.4;white-space:pre-wrap}
 .task-meta{display:flex;align-items:center;gap:5px;flex-shrink:0}
 .del-btn{background:none;border:none;color:var(--text3);cursor:pointer;padding:2px 5px;border-radius:4px;font-size:16px;line-height:1}
 
@@ -271,7 +271,7 @@ input[type=time]{color-scheme:dark}
       <div class="card">
         <div class="card-label">add task</div>
         <textarea id="task-input" placeholder="What needs to get done today?&#10;Add multiple tasks, one per line" autocomplete="off" rows="3" style="min-height:72px;resize:none" onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)){event.preventDefault();addTask()}"></textarea>
-        <div style="font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:5px">one task per line · ctrl+enter or click add</div>
+        <div style="font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:5px">blank line = new task · enter = new line within task · ctrl+enter or click add</div>
         <div class="pri-row">
           <span style="font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;align-self:center">priority →</span>
           <button class="pri-btn sel-p1" id="pb-P1" onclick="setPri('P1')">P1 urgent</button>
@@ -515,7 +515,7 @@ function addTask(text, pri, source, meetingName) {
       date:todayStr(), ts:Date.now()
     });
   } else {
-    const lines = input.value.split('\n').map(l=>l.trim()).filter(l=>l);
+    const lines = input.value.split(/\n\s*\n/).map(l=>l.trim()).filter(l=>l);
     if (!lines.length) return;
     lines.forEach(line => {
       tasks.unshift({
