@@ -1,4 +1,4 @@
-const CACHE = 'pm-os-v4';
+const CACHE = 'pm-os-v5';
 const ASSETS = ['/', '/index.html', '/manifest.json'];
 
 self.addEventListener('install', e => {
@@ -7,16 +7,21 @@ self.addEventListener('install', e => {
 });
 
 self.addEventListener('activate', e => {
-  e.waitUntil(clients.claim());
-});
-
-self.addEventListener('fetch', e => {
-  e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request))
+  // Delete all old caches so stale files are never served
+  e.waitUntil(
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(() => clients.claim())
   );
 });
 
-// Push notification handler
+self.addEventListener('fetch', e => {
+  // Only look in the current cache version, never stale ones
+  e.respondWith(
+    caches.open(CACHE).then(c => c.match(e.request)).then(cached => cached || fetch(e.request))
+  );
+});
+
 self.addEventListener('push', e => {
   const data = e.data ? e.data.json() : {};
   e.waitUntil(
@@ -48,18 +53,16 @@ self.addEventListener('notificationclick', e => {
   );
 });
 
-// Scheduled local notification via periodic sync fallback
-// Main app posts a message to trigger EOD reminder
 self.addEventListener('message', e => {
-  if (e.data && e.data.type === 'SCHEDULE_EOD') {
-    const { time, pendingCount } = e.data;
-    // Store the scheduled time
-    self.eodTime = time;
-  }
   if (e.data && e.data.type === 'FIRE_EOD') {
     const { pendingCount, doneCount } = e.data;
+    const body = doneCount === 0 && pendingCount === 0
+      ? "No tasks logged today. Time for your EOD review."
+      : pendingCount > 0
+        ? `${doneCount} done, ${pendingCount} still pending. Time to wrap up!`
+        : `All ${doneCount} tasks done today. Great work!`;
     self.registration.showNotification('PM Daily OS — EOD Reminder', {
-      body: `Day wrapping up: ${doneCount} done, ${pendingCount} still pending. Time for your review.`,
+      body,
       icon: '/icons/icon-192.png',
       badge: '/icons/icon-32.png',
       tag: 'eod-reminder',
