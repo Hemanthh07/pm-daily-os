@@ -1,4 +1,4 @@
-const CACHE = 'pm-os-v3';
+const CACHE = 'pm-os-v4';
 const ASSETS = ['/', '/index.html', '/manifest.json'];
 
 self.addEventListener('install', e => {
